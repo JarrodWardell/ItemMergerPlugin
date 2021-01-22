@@ -26,6 +26,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 /*
     To Do:
+            BIG! - Make this plugin follow OOP properly. Also rename from Main.java to ItemMerger.java
         - Add command to create custom stack in inventory out of held item (Will require ensuring we add all summoned customstacks to list)
         - Add config for how often task scheduler should run and how large the radius is for grouping items
         - Add a max customitem limit that can be defined in config (defaults at int max. currently it would just roll over)
