@@ -123,7 +123,7 @@ public class Main extends JavaPlugin implements Listener {
 
     // This is where the magic happens. Merges all nearby stackable items
     public void mergeNearby(Item item) {
-        if (item.getItemStack().getMaxStackSize() != 1 && item.getItemStack().getMaxStackSize() != 0 && hasNBT(item.getItemStack(), "itemmerger.NoStack") ? getNBTBool(item.getItemStack(), "itemmerger.NoStack") : true) { // make sure item is not unique/unstackable (Maybe make this configurable (let certain items stack, deny others stacking. wouldn't be too hard, just check if it is on denied material list))
+        if (item.getItemStack().getMaxStackSize() != 1 && item.getItemStack().getMaxStackSize() != 0 && hasNBT(item.getItemStack(), "itemmerger.NoStack") ? !getNBTBool(item.getItemStack(), "itemmerger.NoStack") : true) { // make sure item is not unique/unstackable (Maybe make this configurable (let certain items stack, deny others stacking. wouldn't be too hard, just check if it is on denied material list))
             int items = item.getItemStack().getAmount();
             if (hasNBT(item.getItemStack(), "itemmerger.CustomStack")) { // see if item is already an item stack. if it is, just multiply item by how much each stack is worth
                 items = items * getNBTInt(item.getItemStack(), "itemmerger.CustomStack");
@@ -135,7 +135,7 @@ public class Main extends JavaPlugin implements Listener {
                 if (entity instanceof Item) { // entity is an item
                     Item near = (Item)entity;
                     if (near.getItemStack().getType() == item.getItemStack().getType()) { // is same type of item
-                        if (sameItem(near.getItemStack(), item.getItemStack()) && hasNBT(near.getItemStack(), "itemmerger.NoStack") ? getNBTBool(near.getItemStack(), "itemmerger.NoStack") : true) { // merge items if they are of the same type and do not have nostack tag
+                        if (sameItem(near.getItemStack(), item.getItemStack()) && hasNBT(near.getItemStack(), "itemmerger.NoStack") ? !getNBTBool(near.getItemStack(), "itemmerger.NoStack") : true) { // merge items if they are of the same type and do not have nostack tag
                             if (hasNBT(near.getItemStack(), "itemmerger.CustomStack")) { // item found is custom stack
                                 items += getNBTInt(near.getItemStack(), "itemmerger.CustomStack") * near.getItemStack().getAmount(); // multiply in case of fringe case that somehow a customstack stacked
                                 near.getItemStack().setAmount(0); // delete stack
