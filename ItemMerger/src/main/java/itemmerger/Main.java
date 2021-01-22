@@ -88,6 +88,12 @@ public class Main extends JavaPlugin implements Listener {
         return nmsItem.hasTag() ? (nmsItem.getTag().hasKey(tag) ? nmsItem.getTag().getInt(tag) : 0) : 0;
     }
 
+    // Helper function to read an Integer NBT tag
+    private Boolean getNBTBool(ItemStack item, String tag) {
+        net.minecraft.server.v1_12_R1.ItemStack nmsItem = CraftItemStack.asNMSCopy(item);
+        return nmsItem.hasTag() ? (nmsItem.getTag().hasKey(tag) ? nmsItem.getTag().getBoolean(tag) : false) : false;
+    }
+
     // Helper function to remove a specific NBT tag outright
     private ItemStack removeNBT(ItemStack item, String tag) {
         net.minecraft.server.v1_12_R1.ItemStack nmsItem = CraftItemStack.asNMSCopy(item);
@@ -106,9 +112,18 @@ public class Main extends JavaPlugin implements Listener {
         return CraftItemStack.asBukkitCopy(nmsItem);
     }
 
+    // Helper function to make or set an NBT tag to supplied value
+    private ItemStack setNBTBool(ItemStack item, String tag, Boolean value) {
+        net.minecraft.server.v1_12_R1.ItemStack nmsItem = CraftItemStack.asNMSCopy(item);
+        NBTTagCompound comp = nmsItem.hasTag() ? nmsItem.getTag() : new NBTTagCompound();
+        comp.setBoolean(tag, value);
+        nmsItem.setTag(comp);
+        return CraftItemStack.asBukkitCopy(nmsItem);
+    }
+
     // This is where the magic happens. Merges all nearby stackable items
     public void mergeNearby(Item item) {
-        if (item.getItemStack().getMaxStackSize() != 1 && item.getItemStack().getMaxStackSize() != 0) { // make sure item is not unique/unstackable (Maybe make this configurable (let certain items stack, deny others stacking. wouldn't be too hard))
+        if (item.getItemStack().getMaxStackSize() != 1 && item.getItemStack().getMaxStackSize() != 0 && hasNBT(item.getItemStack(), "itemmerger.NoStack") ? getNBTBool(item.getItemStack(), "itemmerger.NoStack") : true) { // make sure item is not unique/unstackable (Maybe make this configurable (let certain items stack, deny others stacking. wouldn't be too hard, just check if it is on denied material list))
             int items = item.getItemStack().getAmount();
             if (hasNBT(item.getItemStack(), "itemmerger.CustomStack")) { // see if item is already an item stack. if it is, just multiply item by how much each stack is worth
                 items = items * getNBTInt(item.getItemStack(), "itemmerger.CustomStack");
@@ -120,7 +135,7 @@ public class Main extends JavaPlugin implements Listener {
                 if (entity instanceof Item) { // entity is an item
                     Item near = (Item)entity;
                     if (near.getItemStack().getType() == item.getItemStack().getType()) { // is same type of item
-                        if (sameItem(near.getItemStack(), item.getItemStack())) { // merge items if they are of the same type
+                        if (sameItem(near.getItemStack(), item.getItemStack()) && hasNBT(near.getItemStack(), "itemmerger.NoStack") ? getNBTBool(near.getItemStack(), "itemmerger.NoStack") : true) { // merge items if they are of the same type and do not have nostack tag
                             if (hasNBT(near.getItemStack(), "itemmerger.CustomStack")) { // item found is custom stack
                                 items += getNBTInt(near.getItemStack(), "itemmerger.CustomStack") * near.getItemStack().getAmount(); // multiply in case of fringe case that somehow a customstack stacked
                                 near.getItemStack().setAmount(0); // delete stack
@@ -140,7 +155,9 @@ public class Main extends JavaPlugin implements Listener {
     // used to insert the customstack items into a players inventory. it is assumed that items passed ARE custom stacks.
     private void pickedUp(Player player, Item item) {
         Pair<ItemStack[], Integer> values = updateInventory(player.getInventory(), item);
-        player.getInventory().setContents(values.getKey()); // update inventory
+        if (getNBTInt(item.getItemStack(), "itemmerger.CustomStack") != values.getValue()) { // fixes hand waving bug by just not updating the inventory if it isn't updated.
+            player.getInventory().setContents(values.getKey()); // update inventory
+        }
         if (values.getValue() >= 0) {
             item.getItemStack().setItemMeta(setNBTInt(item.getItemStack(), "itemmerger.CustomStack", values.getValue()).getItemMeta()); // update the customstack
         } else {
