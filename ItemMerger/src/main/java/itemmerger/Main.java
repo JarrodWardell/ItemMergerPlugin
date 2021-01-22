@@ -62,6 +62,7 @@ public class Main extends JavaPlugin implements Listener {
                         for (Entity entity : item.getNearbyEntities(1.425, 1.425, 1.425)) {
                             if (entity instanceof Player) {
                                 pickedUp((Player)entity, item);
+                                break;
                             }
                         }
                         }
@@ -123,7 +124,7 @@ public class Main extends JavaPlugin implements Listener {
 
     // This is where the magic happens. Merges all nearby stackable items
     public void mergeNearby(Item item) {
-        if (item.getItemStack().getMaxStackSize() != 1 && item.getItemStack().getMaxStackSize() != 0 && hasNBT(item.getItemStack(), "itemmerger.NoStack") ? !getNBTBool(item.getItemStack(), "itemmerger.NoStack") : true) { // make sure item is not unique/unstackable (Maybe make this configurable (let certain items stack, deny others stacking. wouldn't be too hard, just check if it is on denied material list))
+        if (item.getItemStack().getMaxStackSize() != 1 && item.getItemStack().getMaxStackSize() != 0 && (hasNBT(item.getItemStack(), "itemmerger.NoStack") ? !getNBTBool(item.getItemStack(), "itemmerger.NoStack") : true)) { // make sure item is not unique/unstackable (Maybe make this configurable (let certain items stack, deny others stacking. wouldn't be too hard, just check if it is on denied material list))
             int items = item.getItemStack().getAmount();
             if (hasNBT(item.getItemStack(), "itemmerger.CustomStack")) { // see if item is already an item stack. if it is, just multiply item by how much each stack is worth
                 items = items * getNBTInt(item.getItemStack(), "itemmerger.CustomStack");
@@ -135,7 +136,7 @@ public class Main extends JavaPlugin implements Listener {
                 if (entity instanceof Item) { // entity is an item
                     Item near = (Item)entity;
                     if (near.getItemStack().getType() == item.getItemStack().getType()) { // is same type of item
-                        if (sameItem(near.getItemStack(), item.getItemStack()) && hasNBT(near.getItemStack(), "itemmerger.NoStack") ? !getNBTBool(near.getItemStack(), "itemmerger.NoStack") : true) { // merge items if they are of the same type and do not have nostack tag
+                        if (sameItem(near.getItemStack(), item.getItemStack()) && (hasNBT(near.getItemStack(), "itemmerger.NoStack") ? !getNBTBool(near.getItemStack(), "itemmerger.NoStack") : true)) { // merge items if they are of the same type and do not have nostack tag
                             if (hasNBT(near.getItemStack(), "itemmerger.CustomStack")) { // item found is custom stack
                                 items += getNBTInt(near.getItemStack(), "itemmerger.CustomStack") * near.getItemStack().getAmount(); // multiply in case of fringe case that somehow a customstack stacked
                                 near.getItemStack().setAmount(0); // delete stack
@@ -155,7 +156,7 @@ public class Main extends JavaPlugin implements Listener {
     // used to insert the customstack items into a players inventory. it is assumed that items passed ARE custom stacks.
     private void pickedUp(Player player, Item item) {
         Pair<ItemStack[], Integer> values = updateInventory(player.getInventory(), item);
-        if (getNBTInt(item.getItemStack(), "itemmerger.CustomStack") != values.getValue()) { // fixes hand waving bug by just not updating the inventory if it isn't updated.
+        if (player.getInventory().getContents() !=  values.getKey()) { // fixes hand waving bug by just not updating the inventory if it isn't updated.
             player.getInventory().setContents(values.getKey()); // update inventory
         }
         if (values.getValue() >= 0) {
@@ -198,7 +199,7 @@ public class Main extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onItemPickup(EntityPickupItemEvent event) { // emitted when an entity picks up an item
-        if (hasNBT(event.getItem().getItemStack(), "itemmerger.CustomStack")) { // only deal with customstacks
+        if (hasNBT(event.getItem().getItemStack(), "itemmerger.CustomStack") && (hasNBT(event.getItem().getItemStack(), "itemmerger.NoStack") ? !getNBTBool(event.getItem().getItemStack(), "itemmerger.NoStack") : true)) { // only deal with customstacks that are not NoStacks
             event.setCancelled(true); // make sure the stack is not removed
             pickedUp((Player)event.getEntity(), event.getItem());
         }
@@ -206,7 +207,7 @@ public class Main extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onItemPickupInventory(InventoryPickupItemEvent event) { // inventory has picked up an item
-        if (hasNBT(event.getItem().getItemStack(), "itemmerger.CustomStack")) { // only deal with customstacks
+        if (hasNBT(event.getItem().getItemStack(), "itemmerger.CustomStack") && (hasNBT(event.getItem().getItemStack(), "itemmerger.NoStack") ? !getNBTBool(event.getItem().getItemStack(), "itemmerger.NoStack") : true)) { // only deal with customstacks that aren't NoStack
             event.setCancelled(true); // make sure the stack is not removed
             Pair<ItemStack[], Integer> values = updateInventory(event.getInventory(), event.getItem());
             event.getInventory().setContents(values.getKey()); // update inventory
