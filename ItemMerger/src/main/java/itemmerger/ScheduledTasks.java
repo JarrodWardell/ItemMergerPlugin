@@ -11,6 +11,8 @@ import java.util.ArrayList;
 
 public class ScheduledTasks {
     protected static BukkitRunnable stackUpdate = new BukkitRunnable() { // the task used for merging nearby stacks that fell near eachother and inserting items into a player inventory
+        public List<Item> customstacks;
+
         @Override
         public void run() {
             ItemMerger.customstacks.removeAll(Collections.singleton(null)); // get rid of items that were already deleted
@@ -23,7 +25,8 @@ public class ScheduledTasks {
             for (Item item : invalidstacks) {
                 ItemMerger.customstacks.remove(item);
             }
-            for (Item item : ItemMerger.customstacks) { // iterate through list
+            customstacks = new ArrayList<Item>(ItemMerger.customstacks); // avoid concurrentmodificationexception that leads to items being deleted
+            for (Item item : customstacks) { // iterate through list
                 ItemMerger.mergeNearby(item);
                 if (item.getPickupDelay() == 0) {
                     for (Entity entity : item.getNearbyEntities(1.425, 1.425, 1.425)) {

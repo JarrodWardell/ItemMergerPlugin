@@ -18,12 +18,12 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 /*
     To Do:
-            BIG! - Make this plugin follow OOP properly. Also rename from Main.java to ItemMerger.java
         - Add command to create custom stack in inventory out of held item (Will require ensuring we add all summoned customstacks to list)
         - Add config for how often task scheduler should run and how large the radius is for grouping items
         - Add a max customitem limit that can be defined in config (defaults at int max. currently it would just roll over)
         - Add command to toggle scheduler
         - Add command to toggle creating new stacks
+        - Fix weird bug where creative players creating stacks will have some items not counted (low priority, doesn't affect survival players. probably something to do with how creative players are dealt with differently)
 */
 
 public class ItemMerger extends JavaPlugin {
@@ -79,13 +79,14 @@ public class ItemMerger extends JavaPlugin {
     // used to insert the customstack items into a players inventory. it is assumed that items passed ARE custom stacks.
     protected static void pickedUp(Player player, Item item) {
         Pair<ItemStack[], Integer> values = updateInventory(player.getInventory(), item);
-        if (player.getInventory().getContents() !=  values.getKey()) { // fixes hand waving bug by just not updating the inventory if it isn't updated.
+        if (!player.getInventory().getContents().equals(values.getKey())) { // only do stuff if the inventory is actually being changed
             player.getInventory().setContents(values.getKey()); // update inventory
-        }
-        if (values.getValue() >= 0) {
-            item.getItemStack().setItemMeta(NBTHelper.setNBTInt(item.getItemStack(), "itemmerger.CustomStack", values.getValue()).getItemMeta()); // update the customstack
-        } else {
-            customstacks.remove(item); // do not check on this item again - this has to happen here rather than in updateInventory or it causes a ConcurrentModificationException in the scheduler (could use a bool param, but I decided not to.)
+            if (values.getValue() > 0) {
+                item.getItemStack().setItemMeta(NBTHelper.setNBTInt(item.getItemStack(), "itemmerger.CustomStack", values.getValue()).getItemMeta()); // update the customstack
+            } else {
+                item.getItemStack().setAmount(0); // delete stack
+                customstacks.remove(item); // do not check on this item again - this has to happen here rather than in updateInventory or it causes a ConcurrentModificationException in the scheduler (could use a bool param, but I decided not to.)
+            }
         }
     }
 
@@ -93,7 +94,7 @@ public class ItemMerger extends JavaPlugin {
         Integer items = NBTHelper.getNBTInt(item.getItemStack(), "itemmerger.CustomStack"); // get how many items are in the stack
         ItemStack[] inventory = new ItemStack[inputinventory.getContents().length]; // array that will be used to update inventory
         for (int pos = 0; pos < inventory.length; pos++) {
-            if ((inputinventory.getItem(pos) == null ? true : (sameItem(item.getItemStack(), inputinventory.getItem(pos)) && inputinventory.getItem(pos).getAmount() < inputinventory.getItem(pos).getMaxStackSize())) && pos < 36 && items > 0) { //
+            if ((inputinventory.getItem(pos) == null ? true : (NBTHelper.removeNBT(item.getItemStack(), "itemmerger.CustomStack").isSimilar(inputinventory.getItem(pos)) && inputinventory.getItem(pos).getAmount() < inputinventory.getItem(pos).getMaxStackSize())) && pos < 36 && items > 0) { //
                 Integer curAmount = inputinventory.getItem(pos) == null ? 0 : inputinventory.getItem(pos).getAmount(); // get the amount in this slot, or set it to 0
                 if (items - (item.getItemStack().getMaxStackSize() - curAmount) > 0) { // there are more items than would take to fill the slot
                     items -= inputinventory.getItem(pos) != null ? item.getItemStack().getMaxStackSize() - inputinventory.getItem(pos).getAmount() : item.getItemStack().getMaxStackSize();
@@ -103,7 +104,6 @@ public class ItemMerger extends JavaPlugin {
                     inventory[pos] = NBTHelper.removeNBT(item.getItemStack(), "itemmerger.CustomStack");
                     inventory[pos].setAmount(inputinventory.getItem(pos) == null ? items : items + inputinventory.getItem(pos).getAmount());
                     items = 0;
-                    item.getItemStack().setAmount(0);
                 }
             } else {
                 if (inputinventory.getItem(pos) != null) {
