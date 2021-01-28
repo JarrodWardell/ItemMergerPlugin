@@ -27,7 +27,7 @@ final class ItemEvents implements Listener { // not designed to be extended. wha
     @EventHandler
     public static void onItemPickup(EntityPickupItemEvent event) { // emitted when an entity picks up an item
         if (NBTHelper.hasNBT(event.getItem().getItemStack(), "itemmerger.CustomStack") && (NBTHelper.hasNBT(event.getItem().getItemStack(), "itemmerger.NoStack") ? !NBTHelper.getNBTBool(event.getItem().getItemStack(), "itemmerger.NoStack") : true)) { // only deal with customstacks that are not NoStacks
-            event.setCancelled(true); // make sure the stack is not removed
+            event.setCancelled(true); // make sure the stack is not picked up
             ItemMerger.pickedUp((Player)event.getEntity(), event.getItem());
         }
     }
@@ -38,9 +38,10 @@ final class ItemEvents implements Listener { // not designed to be extended. wha
             event.setCancelled(true); // make sure the stack is not removed
             Pair<ItemStack[], Integer> values = ItemMerger.updateInventory(event.getInventory(), event.getItem());
             event.getInventory().setContents(values.getKey()); // update inventory
-            if (values.getValue() >= 0) {
+            if (values.getValue() > 0) {
                 event.getItem().getItemStack().setItemMeta(NBTHelper.setNBTInt(event.getItem().getItemStack(), "itemmerger.CustomStack", values.getValue()).getItemMeta()); // update the customstack
             } else {
+                event.getItem().getItemStack().setAmount(0); // delete item
                 ItemMerger.customstacks.remove(event.getItem()); // do not check on this item again - this has to happen here rather than in updateInventory or it causes a ConcurrentModificationException in the scheduler (could use a bool param, but I decided not to.)
             }
         }
